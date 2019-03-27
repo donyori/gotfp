@@ -10,8 +10,6 @@ import (
 	"github.com/donyori/gorecover"
 )
 
-// Note that: fmt.Println() and fmt.Printf() are for debug.
-
 func mainProc(root string, handler workerHandler,
 	workerNumber int, workerErrChan chan<- error,
 	workerSendErrTimeout time.Duration) error {
@@ -65,7 +63,6 @@ func mainProc(root string, handler workerHandler,
 		// Remove unsent sub-task, to avoid worker manager wait forever.
 		unsentNumber := pq.Len()
 		if unsentNumber > 0 {
-			// fmt.Println("main -", unsentNumber, "sub-tasks are unsent and removed.")
 			subTaskWg.Add(-unsentNumber)
 		}
 		// Wait for workers and worker manager exit.
@@ -114,7 +111,6 @@ func mainProc(root string, handler workerHandler,
 				doesContinue = false
 				break
 			}
-			// fmt.Println("main - Received sub-task:", st.fileInfo.path)
 			subTaskOutChan = stChan // Enable subTaskOutChan.
 			err = pq.Enqueue(st)
 			if err != nil {
@@ -127,7 +123,6 @@ func mainProc(root string, handler workerHandler,
 			}
 			getTop()
 		case subTaskOutChan <- topSubTask: // After sending sub-task to worker.
-			// fmt.Println("main - Sent sub-task:", topSubTask.fileInfo.path)
 			_, err = pq.Dequeue()
 			if err != nil {
 				if pq.Len() == lastLen {
@@ -148,7 +143,6 @@ func mainProc(root string, handler workerHandler,
 			doesContinue = false
 		}
 	}
-	// fmt.Println("main - End main for loop")
 
 	return err
 }
@@ -159,7 +153,6 @@ func workerProc(handler workerHandler, sendErrTimeout time.Duration,
 	doneChan <-chan struct{}, exitInChan <-chan struct{},
 	exitOutChan chan<- struct{}) {
 	defer runningWg.Done()
-	// fmt.Println("worker - Start")
 	var timer *time.Timer
 	var timeoutChan <-chan time.Time
 	if sendErrTimeout > 0 {
@@ -198,7 +191,6 @@ func workerProc(handler workerHandler, sendErrTimeout time.Duration,
 							return
 						}
 						nextFilesLen = len(nextFiles)
-						// fmt.Println("worker -", st.fileInfo.path, "; len(nextFiles) =", nextFilesLen)
 						if nextFilesLen == 0 {
 							return
 						}
@@ -214,7 +206,6 @@ func workerProc(handler workerHandler, sendErrTimeout time.Duration,
 							if info == nil {
 								continue
 							}
-							// fmt.Println("worker - Sending new sub-task", info)
 							newSt = &subTask{
 								fileInfo: *info,
 								depth:    st.depth + 1,
@@ -227,7 +218,6 @@ func workerProc(handler workerHandler, sendErrTimeout time.Duration,
 								doesContinue = false
 								return
 							case subTaskOutChan <- newSt:
-								// fmt.Println("worker - Sent new sub-task:", newSt.fileInfo.path)
 								sentCount += 1
 							}
 						}
@@ -270,17 +260,14 @@ func workerProc(handler workerHandler, sendErrTimeout time.Duration,
 			}()
 		}
 	}
-	// fmt.Println("worker - End main for loop")
 }
 
 func workerManagerProc(runningWg, subTaskWg *sync.WaitGroup,
 	doneToWorkerChan chan<- struct{}, subTaskChan chan<- *subTask,
 	exitChan chan<- struct{}, doneChan chan<- struct{}) {
 	defer close(doneChan)
-	// fmt.Println("worker manager - Start and wait for subTaskingWg")
 	subTaskWg.Wait()
 	close(doneToWorkerChan)
-	// fmt.Println("worker manager - Wait for runningWg")
 	runningWg.Wait()
 	// Close all write channels used by workers.
 	// Not necessary, but for safety, maybe...
