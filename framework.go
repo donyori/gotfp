@@ -79,8 +79,7 @@ func mainProc(root string, handler workerHandler,
 			stChan, rtChan, workerErrChan, dwChan, seChan, reChan)
 	}
 	subTaskWg.Add(1) // One sub-task at the beginning, the root. Other sub-tasks are created by workers, not mainProc.
-	go workerManagerProc(&runningWg, &subTaskWg, dwChan, rtChan,
-		workerErrChan, reChan, dChan)
+	go workerManagerProc(&runningWg, &subTaskWg, dwChan, rtChan, reChan, dChan)
 
 	// Some variables used in loop.
 	var top gocontainer.Comparable
@@ -276,7 +275,7 @@ func workerProc(handler workerHandler, sendErrTimeout time.Duration,
 
 func workerManagerProc(runningWg, subTaskWg *sync.WaitGroup,
 	doneToWorkerChan chan<- struct{}, subTaskChan chan<- *subTask,
-	errChan chan<- error, exitChan chan<- struct{}, doneChan chan<- struct{}) {
+	exitChan chan<- struct{}, doneChan chan<- struct{}) {
 	defer close(doneChan)
 	// fmt.Println("worker manager - Start and wait for subTaskingWg")
 	subTaskWg.Wait()
@@ -286,8 +285,5 @@ func workerManagerProc(runningWg, subTaskWg *sync.WaitGroup,
 	// Close all write channels used by workers.
 	// Not necessary, but for safety, maybe...
 	close(subTaskChan)
-	if errChan != nil {
-		close(errChan)
-	}
 	close(exitChan)
 }
