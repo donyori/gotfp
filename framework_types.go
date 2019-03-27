@@ -9,6 +9,7 @@ type subTask struct {
 	depth    int
 }
 
+// There should be no nil *FInfo in "nextFiles"!
 type workerHandler func(st *subTask, errBuf *[]error) (
 	nextFiles []*FInfo, doesExit bool)
 

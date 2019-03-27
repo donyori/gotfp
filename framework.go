@@ -2,8 +2,6 @@ package gotfp
 
 import (
 	"errors"
-	"fmt"
-	"os"
 	"sync"
 	"time"
 
@@ -67,8 +65,7 @@ func mainProc(root string, handler workerHandler,
 		// Remove unsent sub-task, to avoid worker manager wait forever.
 		unsentNumber := pq.Len()
 		if unsentNumber > 0 {
-			fmt.Fprintln(os.Stderr, "gotfp: WARNING:", unsentNumber,
-				"sub-tasks are unsent and removed.")
+			// fmt.Println("main -", unsentNumber, "sub-tasks are unsent and removed.")
 			subTaskWg.Add(-unsentNumber)
 		}
 		// Wait for workers and worker manager exit.
@@ -178,6 +175,7 @@ func workerProc(handler workerHandler, sendErrTimeout time.Duration,
 	var errBuf []error
 	var nextFiles []*FInfo
 	var info *FInfo
+	var nextFilesLen, sentCount, unsentCount int
 	doesContinue := true
 	for doesContinue {
 		select {
@@ -200,7 +198,19 @@ func workerProc(handler workerHandler, sendErrTimeout time.Duration,
 							exitOutChan <- struct{}{}
 							return
 						}
-						// fmt.Println("worker -", st.fileInfo.path, "; len(nextFiles) =", len(nextFiles))
+						nextFilesLen = len(nextFiles)
+						// fmt.Println("worker -", st.fileInfo.path, "; len(nextFiles) =", nextFilesLen)
+						if nextFilesLen == 0 {
+							return
+						}
+						sentCount = 0
+						subTaskWg.Add(nextFilesLen)
+						defer func() {
+							unsentCount = nextFilesLen - sentCount
+							if unsentCount > 0 {
+								subTaskWg.Add(-unsentCount) // Adjust sub-task counting.
+							}
+						}()
 						for _, info = range nextFiles {
 							if info == nil {
 								continue
@@ -219,7 +229,7 @@ func workerProc(handler workerHandler, sendErrTimeout time.Duration,
 								return
 							case subTaskOutChan <- newSt:
 								// fmt.Println("worker - Sent new sub-task:", newSt.fileInfo.path)
-								subTaskWg.Add(1)
+								sentCount += 1
 							}
 						}
 					})
@@ -269,7 +279,7 @@ func workerManagerProc(runningWg, subTaskWg *sync.WaitGroup,
 	errChan chan<- error, exitChan chan<- struct{}, doneChan chan<- struct{}) {
 	defer close(doneChan)
 	// fmt.Println("worker manager - Start and wait for subTaskingWg")
-	subTaskWg.Wait() // WARNING: Here maybe have a bug, which randomly occurs and cause a panic: sync: WaitGroup is reused before previous Wait has returned.
+	subTaskWg.Wait()
 	close(doneToWorkerChan)
 	// fmt.Println("worker manager - Wait for runningWg")
 	runningWg.Wait()
