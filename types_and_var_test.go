@@ -6,19 +6,6 @@ import (
 	"runtime"
 )
 
-// Interface to log in test.
-// Use with testing.T or testing.B
-type testLogger interface {
-	Log(args ...interface{})
-	Logf(format string, args ...interface{})
-	Error(args ...interface{})
-	Errorf(format string, args ...interface{})
-	Fatal(args ...interface{})
-	Fatalf(format string, args ...interface{})
-	Skip(args ...interface{})
-	Skipf(format string, args ...interface{})
-}
-
 var (
 	testRoot     string // Set as GOROOT.
 	testMaxProcs int    // Set as GOMAXPROCS.

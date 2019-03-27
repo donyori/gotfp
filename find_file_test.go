@@ -92,37 +92,37 @@ func TestFindFileWithWalk(t *testing.T) {
 
 // TODO: Benchmark.
 
-func testFindFileMakeHandler(tl testLogger, counter *uint64) FileHandler {
+func testFindFileMakeHandler(tb testing.TB, counter *uint64) FileHandler {
 	return func(info *FInfo, depth int) Action {
 		atomic.AddUint64(counter, 1)
 		if info == nil {
-			tl.Error("info is nil!")
+			tb.Error("info is nil!")
 			return ActionContinue
 		}
 		if info.path == "" {
-			tl.Error("path is empty!")
+			tb.Error("path is empty!")
 		}
 		if info.err != nil {
-			tl.Log(info.err)
+			tb.Log(info.err)
 			return ActionContinue
 		}
 		if info.info == nil {
-			tl.Error("No error but info is nil!")
+			tb.Error("No error but info is nil!")
 			return ActionContinue
 		}
 		if info.info.Name() == "src" && info.info.IsDir() && depth == 1 {
-			tl.Log("Skip", info.path)
+			tb.Log("Skip", info.path)
 			return ActionSkipDir
 		}
 		if info.info.Name() == "helloworld.go" {
-			tl.Log("Found \"helloworld.go\". Size:", info.info.Size(), "bytes. Path:", info.path)
+			tb.Log("Found \"helloworld.go\". Size:", info.info.Size(), "bytes. Path:", info.path)
 			return ActionExit
 		}
 		return ActionContinue
 	}
 }
 
-func testFindFileMakeWalkFn(tl testLogger, root string, counter *uint64) filepath.WalkFunc {
+func testFindFileMakeWalkFn(tb testing.TB, root string, counter *uint64) filepath.WalkFunc {
 	isFound := false
 	return func(path string, info os.FileInfo, err error) error {
 		atomic.AddUint64(counter, 1)
@@ -130,20 +130,20 @@ func testFindFileMakeWalkFn(tl testLogger, root string, counter *uint64) filepat
 			return filepath.SkipDir
 		}
 		if err != nil {
-			tl.Log(err)
+			tb.Log(err)
 			return nil // Continue to search.
 		}
 		if info == nil {
-			tl.Error("No error but info is nil!")
+			tb.Error("No error but info is nil!")
 			return nil // Continue to search.
 		}
 		if info.Name() == "src" && info.IsDir() && filepath.Join(root, "src") == path {
-			tl.Log("Skip", path)
+			tb.Log("Skip", path)
 			return filepath.SkipDir
 		}
 		if info.Name() == "helloworld.go" {
 			isFound = true
-			tl.Log("Found \"helloworld.go\". Size:", info.Size(), "bytes. Path:", path)
+			tb.Log("Found \"helloworld.go\". Size:", info.Size(), "bytes. Path:", path)
 			return filepath.SkipDir
 		}
 		return nil
