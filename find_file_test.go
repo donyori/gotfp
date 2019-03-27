@@ -46,6 +46,7 @@ func TestFindFile(t *testing.T) {
 		t.Log("Finally, handler called", atomic.LoadUint64(&counter), "times")
 	}()
 
+	defer close(errChan)
 	err := TraverseFiles(testRoot, handler, testMaxProcs, errChan, 0)
 	if err != nil {
 		t.Error(err)
@@ -90,11 +91,73 @@ func TestFindFileWithWalk(t *testing.T) {
 	}
 }
 
-// TODO: Benchmark.
+func BenchmarkFindFile(b *testing.B) {
+	fmt.Println("GOMAXPROCS =", testMaxProcs)
+	errChan := make(chan error, 10)
+	doneChan := make(chan struct{})
+	benchmarks := []struct {
+		name         string
+		workerNumber int
+	}{
+		{"wn=1", 1},
+		{"wn=2", 2},
+		{"wn=3", 3},
+		{"wn=4", 4},
+		{"wn=GOMAXPROCS/2", testMaxProcs / 2},
+		{"wn=GOMAXPROCS", testMaxProcs},
+		{"wn=GOMAXPROCS*2", testMaxProcs * 2},
+		{"wn=GOMAXPROCS*4", testMaxProcs * 4},
+		// ...
+	}
+	go func() {
+		// b.Log("Daemon start")
+		fmt.Println("Daemon start")
+		// defer b.Log("Daemon done")
+		defer fmt.Println("Daemon done")
+		defer close(doneChan)
+		for err := range errChan {
+			b.Error(err)
+		}
+	}()
+	defer func() {
+		// b.Log("Wait for daemon stop")
+		fmt.Println("Wait for daemon stop")
+		<-doneChan
+	}()
+	defer close(errChan)
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			handler := testFindFileMakeHandler(b, nil)
+			var err error
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				err = TraverseFiles(testRoot, handler,
+					bm.workerNumber, errChan, 0)
+				if err != nil {
+					b.Error(err)
+				}
+			}
+		})
+	}
+	// Compare with path/filepath.Walk()
+	b.Run("Walk()", func(b *testing.B) {
+		walkFn := testFindFileMakeWalkFn(b, testRoot, nil)
+		var err error
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			err = filepath.Walk(testRoot, walkFn)
+			if err != nil {
+				b.Error(err)
+			}
+		}
+	})
+}
 
 func testFindFileMakeHandler(tb testing.TB, counter *uint64) FileHandler {
 	return func(info *FInfo, depth int) Action {
-		atomic.AddUint64(counter, 1)
+		if counter != nil {
+			atomic.AddUint64(counter, 1)
+		}
 		if info == nil {
 			tb.Error("info is nil!")
 			return ActionContinue
@@ -103,7 +166,7 @@ func testFindFileMakeHandler(tb testing.TB, counter *uint64) FileHandler {
 			tb.Error("path is empty!")
 		}
 		if info.err != nil {
-			tb.Log(info.err)
+			// tb.Log(info.err)
 			return ActionContinue
 		}
 		if info.info == nil {
@@ -111,11 +174,11 @@ func testFindFileMakeHandler(tb testing.TB, counter *uint64) FileHandler {
 			return ActionContinue
 		}
 		if info.info.Name() == "src" && info.info.IsDir() && depth == 1 {
-			tb.Log("Skip", info.path)
+			// tb.Log("Skip", info.path)
 			return ActionSkipDir
 		}
 		if info.info.Name() == "helloworld.go" {
-			tb.Log("Found \"helloworld.go\". Size:", info.info.Size(), "bytes. Path:", info.path)
+			// tb.Log("Found \"helloworld.go\". Size:", info.info.Size(), "bytes. Path:", info.path)
 			return ActionExit
 		}
 		return ActionContinue
@@ -125,12 +188,14 @@ func testFindFileMakeHandler(tb testing.TB, counter *uint64) FileHandler {
 func testFindFileMakeWalkFn(tb testing.TB, root string, counter *uint64) filepath.WalkFunc {
 	isFound := false
 	return func(path string, info os.FileInfo, err error) error {
-		atomic.AddUint64(counter, 1)
+		if counter != nil {
+			atomic.AddUint64(counter, 1)
+		}
 		if isFound {
 			return filepath.SkipDir
 		}
 		if err != nil {
-			tb.Log(err)
+			// tb.Log(err)
 			return nil // Continue to search.
 		}
 		if info == nil {
@@ -138,12 +203,12 @@ func testFindFileMakeWalkFn(tb testing.TB, root string, counter *uint64) filepat
 			return nil // Continue to search.
 		}
 		if info.Name() == "src" && info.IsDir() && filepath.Join(root, "src") == path {
-			tb.Log("Skip", path)
+			// tb.Log("Skip", path)
 			return filepath.SkipDir
 		}
 		if info.Name() == "helloworld.go" {
 			isFound = true
-			tb.Log("Found \"helloworld.go\". Size:", info.Size(), "bytes. Path:", path)
+			// tb.Log("Found \"helloworld.go\". Size:", info.Size(), "bytes. Path:", path)
 			return filepath.SkipDir
 		}
 		return nil
