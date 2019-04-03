@@ -1,12 +1,16 @@
 package gotfp
 
-import "time"
+import "os"
 
-func resetTimer(timer *time.Timer, duration time.Duration) {
-	timer.Stop()
-	select {
-	case <-timer.C: //Try to drain from the channel.
-	default:
+func readDirNames(dirPath string) (dirNames []string, err error) {
+	dirFile, err := os.Open(dirPath)
+	if err != nil {
+		return nil, err
 	}
-	timer.Reset(duration)
+	defer dirFile.Close() // Ignore error.
+	dirNames, err = dirFile.Readdirnames(0)
+	if err != nil {
+		dirNames = nil
+	}
+	return
 }

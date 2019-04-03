@@ -47,7 +47,8 @@ func TestFindFile(t *testing.T) {
 	}()
 
 	defer close(errChan)
-	err := TraverseFiles(testRoot, handler, testMaxProcs, errChan, time.Microsecond)
+	err := TraverseFiles(handler, testMaxProcs,
+		errChan, time.Microsecond, testRoot)
 	if err != nil {
 		t.Error(err)
 	}
@@ -131,8 +132,8 @@ func BenchmarkFindFile(b *testing.B) {
 			var err error
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				err = TraverseFiles(testRoot, handler,
-					bm.workerNumber, errChan, 0)
+				err = TraverseFiles(handler, bm.workerNumber,
+					errChan, 0, testRoot)
 				if err != nil {
 					b.Error(err)
 				}
