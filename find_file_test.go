@@ -15,7 +15,7 @@ import (
 
 func TestFindFile(t *testing.T) {
 	var counter uint64
-	handler := testFindFileMakeHandler(t, &counter)
+	handler := testFindFileMakeFileHandler(t, &counter)
 	errChan := make(chan error, 10)
 	doneChan := make(chan struct{})
 	ticker := time.NewTicker(time.Second)
@@ -48,6 +48,47 @@ func TestFindFile(t *testing.T) {
 
 	defer close(errChan)
 	err := TraverseFiles(handler, testMaxProcs,
+		errChan, time.Microsecond, testRoot)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestFindFileWithBatch(t *testing.T) {
+	var counter uint64
+	handler := testFindFileMakeBatchHandler(t, &counter)
+	errChan := make(chan error, 10)
+	doneChan := make(chan struct{})
+	ticker := time.NewTicker(time.Second)
+	go func() {
+		// t.Log("Daemon start")
+		fmt.Println("Daemon start")
+		// defer t.Log("Daemon done")
+		defer fmt.Println("Daemon done")
+		defer close(doneChan)
+		for {
+			select {
+			case err, ok := <-errChan:
+				if !ok {
+					return
+				}
+				t.Error(err)
+			case now := <-ticker.C:
+				t.Log(now, "handler called", atomic.LoadUint64(&counter), "times")
+				fmt.Println(now, "handler called", atomic.LoadUint64(&counter), "times")
+			}
+		}
+	}()
+	defer func() {
+		ticker.Stop()
+		// t.Log("Wait for daemon stop")
+		fmt.Println("Wait for daemon stop")
+		<-doneChan
+		t.Log("Finally, handler called", atomic.LoadUint64(&counter), "times")
+	}()
+
+	defer close(errChan)
+	err := TraverseBatches(handler, testMaxProcs,
 		errChan, time.Microsecond, testRoot)
 	if err != nil {
 		t.Error(err)
@@ -97,13 +138,12 @@ func BenchmarkFindFile(b *testing.B) {
 	errChan := make(chan error, 10)
 	doneChan := make(chan struct{})
 	benchmarks := []struct {
-		name         string
+		nameSuffix   string
 		workerNumber int
 	}{
 		{"wn=1", 1},
 		{"wn=2", 2},
 		{"wn=3", 3},
-		{"wn=4", 4},
 		{"wn=GOMAXPROCS/2", testMaxProcs / 2},
 		{"wn=GOMAXPROCS", testMaxProcs},
 		{"wn=GOMAXPROCS*2", testMaxProcs * 2},
@@ -127,12 +167,26 @@ func BenchmarkFindFile(b *testing.B) {
 	}()
 	defer close(errChan)
 	for _, bm := range benchmarks {
-		b.Run(bm.name, func(b *testing.B) {
-			handler := testFindFileMakeHandler(b, nil)
+		b.Run("f-"+bm.nameSuffix, func(b *testing.B) {
+			handler := testFindFileMakeFileHandler(b, nil)
 			var err error
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				err = TraverseFiles(handler, bm.workerNumber,
+					errChan, 0, testRoot)
+				if err != nil {
+					b.Error(err)
+				}
+			}
+		})
+	}
+	for _, bm := range benchmarks {
+		b.Run("b-"+bm.nameSuffix, func(b *testing.B) {
+			handler := testFindFileMakeBatchHandler(b, nil)
+			var err error
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				err = TraverseBatches(handler, bm.workerNumber,
 					errChan, 0, testRoot)
 				if err != nil {
 					b.Error(err)
@@ -154,14 +208,14 @@ func BenchmarkFindFile(b *testing.B) {
 	})
 }
 
-func testFindFileMakeHandler(tb testing.TB, counter *uint64) FileHandler {
-	return func(info *FInfo, depth int) Action {
+func testFindFileMakeFileHandler(tb testing.TB, counter *uint64) FileHandler {
+	isFound := false
+	return func(info FInfo, depth int) Action {
 		if counter != nil {
 			atomic.AddUint64(counter, 1)
 		}
-		if info == nil {
-			tb.Error("info is nil!")
-			return ActionContinue
+		if isFound {
+			return ActionExit
 		}
 		if info.path == "" {
 			tb.Error("path is empty!")
@@ -179,10 +233,49 @@ func testFindFileMakeHandler(tb testing.TB, counter *uint64) FileHandler {
 			return ActionSkipDir
 		}
 		if info.info.Name() == "helloworld.go" {
+			isFound = true
 			// tb.Log("Found \"helloworld.go\". Size:", info.info.Size(), "bytes. Path:", info.path)
 			return ActionExit
 		}
 		return ActionContinue
+	}
+}
+
+func testFindFileMakeBatchHandler(tb testing.TB, counter *uint64) BatchHandler {
+	isFound := false
+	return func(batch Batch, depth int) (
+		action Action, skipDirs map[string]bool) {
+		if counter != nil {
+			atomic.AddUint64(counter, 1)
+		}
+		if isFound {
+			return ActionExit, nil
+		}
+		if batch.Parent.path == "" {
+			tb.Error("Parent path is empty!")
+		}
+		if batch.Parent.err != nil {
+			return ActionContinue, nil
+		}
+		if batch.Parent.info == nil {
+			tb.Error("No error but info is nil!")
+		}
+		for i := range batch.RegFiles {
+			if batch.RegFiles[i].info.Name() == "helloworld.go" {
+				isFound = true
+				return ActionExit, nil
+			}
+		}
+		if depth == 0 {
+			for i := range batch.Dirs {
+				if batch.Dirs[i].info.Name() == "src" {
+					return ActionSkipDir, map[string]bool{
+						batch.Dirs[i].path: true,
+					}
+				}
+			}
+		}
+		return ActionContinue, nil
 	}
 }
 

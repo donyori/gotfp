@@ -9,4 +9,4 @@ type tTask struct {
 
 // There should be no nil *FInfo in "nextFiles"!
 type taskHandler func(task *tTask, errBuf *[]error) (
-	nextFiles []*FInfo, doesExit bool)
+	nextFiles []FInfo, doesExit bool)

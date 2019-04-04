@@ -18,9 +18,9 @@ type Batch struct {
 
 type Action int8
 
-type FileHandler func(info *FInfo, depth int) Action
+type FileHandler func(info FInfo, depth int) Action
 
-type BatchHandler func(batch *Batch, depth int) (
+type BatchHandler func(batch Batch, depth int) (
 	action Action, skipDirs map[string]bool)
 
 const (
@@ -33,17 +33,6 @@ var actionStrings = [...]string{
 	"Continue",
 	"Exit",
 	"SkipDir",
-}
-
-func (fi *FInfo) Copy() *FInfo {
-	if fi == nil {
-		return nil
-	}
-	return &FInfo{
-		path: fi.path,
-		info: fi.info,
-		err:  fi.err,
-	}
 }
 
 func (a Action) String() string {

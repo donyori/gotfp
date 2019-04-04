@@ -30,12 +30,9 @@ func callDfw(handler taskHandler,
 		}
 		newTasks = make([]interface{}, 0, len(nextFiles))
 		newDepth := t.depth + 1
-		for _, nextFile := range nextFiles {
-			if nextFile == nil {
-				continue
-			}
+		for i := range nextFiles {
 			newT := &tTask{
-				fInfo: *nextFile,
+				fInfo: nextFiles[i],
 				depth: newDepth,
 			}
 			newTasks = append(newTasks, newT)

@@ -18,7 +18,7 @@ func TraverseFiles(handler FileHandler,
 		return ErrNonPositiveWorkerNumber
 	}
 	if len(roots) == 0 {
-		// No files to traverse. Just exit.
+		// No file to traverse. Just exit.
 		return nil
 	}
 	h := makeTraverseFilesHandler(handler)
@@ -30,30 +30,33 @@ func TraverseFiles(handler FileHandler,
 // Ensure fileHandler != nil.
 func makeTraverseFilesHandler(fileHandler FileHandler) taskHandler {
 	h := func(task *tTask, errBuf *[]error) (
-		nextFiles []*FInfo, doesExit bool) {
+		nextFiles []FInfo, doesExit bool) {
 		var dirNames []string
+		path := task.fInfo.path
 		info := task.fInfo.info
 		err := task.fInfo.err
 		if err == nil {
 			if info == nil {
 				// Didn't get file stat. Get it now.
-				info, err = os.Lstat(task.fInfo.path)
+				info, err = os.Lstat(path)
 			}
-			if err == nil && info != nil && info.IsDir() {
+			if err == nil && info != nil && info.IsDir() &&
+				(info.Mode()&os.ModeSymlink) == 0 {
 				// Get the name of files under this directory.
-				dirNames, err = readDirNames(task.fInfo.path)
+				dirNames, err = readDirNames(path)
 			}
 		}
 		task.fInfo.info = info
 		task.fInfo.err = err
-		action := fileHandler(task.fInfo.Copy(), task.depth)
+		action := fileHandler(task.fInfo, task.depth)
 		switch action {
 		case ActionContinue:
 			// Do nothing here.
 		case ActionExit:
 			return nil, true
 		case ActionSkipDir:
-			if info == nil || !info.IsDir() {
+			if info == nil || !info.IsDir() ||
+				(info.Mode()&os.ModeSymlink) != 0 {
 				*errBuf = append(*errBuf, ErrNoDirToSkip)
 			}
 			return
@@ -63,13 +66,13 @@ func makeTraverseFilesHandler(fileHandler FileHandler) taskHandler {
 		if len(dirNames) == 0 {
 			return
 		}
-		nextFiles = make([]*FInfo, 0, len(dirNames))
+		nextFiles = make([]FInfo, 0, len(dirNames))
 		for _, name := range dirNames {
-			path := filepath.Join(task.fInfo.path, name)
-			fileInfo, err := os.Lstat(path)
-			nextFiles = append(nextFiles, &FInfo{
-				path: path,
-				info: fileInfo,
+			nextPath := filepath.Join(path, name)
+			info, err = os.Lstat(nextPath)
+			nextFiles = append(nextFiles, FInfo{
+				path: nextPath,
+				info: info,
 				err:  err,
 			})
 		}
