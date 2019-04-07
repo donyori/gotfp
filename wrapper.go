@@ -17,7 +17,7 @@ func callDfw(handler taskHandler,
 	its := make([]interface{}, 0, len(roots))
 	for _, root := range roots {
 		its = append(its, &tTask{
-			fInfo: FInfo{path: root},
+			fInfo: FInfo{Path: root},
 			depth: 0,
 		})
 	}

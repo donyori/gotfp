@@ -217,24 +217,24 @@ func testFindFileMakeFileHandler(tb testing.TB, counter *uint64) FileHandler {
 		if isFound {
 			return ActionExit
 		}
-		if info.path == "" {
+		if info.Path == "" {
 			tb.Error("path is empty!")
 		}
-		if info.err != nil {
-			// tb.Log(info.err)
+		if info.Err != nil {
+			// tb.Log(info.Err)
 			return ActionContinue
 		}
-		if info.info == nil {
+		if info.Info == nil {
 			tb.Error("No error but info is nil!")
 			return ActionContinue
 		}
-		if info.info.Name() == "src" && info.info.IsDir() && depth == 1 {
-			// tb.Log("Skip", info.path)
+		if info.Info.Name() == "src" && info.Info.IsDir() && depth == 1 {
+			// tb.Log("Skip", info.Path)
 			return ActionSkipDir
 		}
-		if info.info.Name() == "helloworld.go" {
+		if info.Info.Name() == "helloworld.go" {
 			isFound = true
-			// tb.Log("Found \"helloworld.go\". Size:", info.info.Size(), "bytes. Path:", info.path)
+			// tb.Log("Found \"helloworld.go\". Size:", info.Info.Size(), "bytes. Path:", info.Path)
 			return ActionExit
 		}
 		return ActionContinue
@@ -251,26 +251,26 @@ func testFindFileMakeBatchHandler(tb testing.TB, counter *uint64) BatchHandler {
 		if isFound {
 			return ActionExit, nil
 		}
-		if batch.Parent.path == "" {
+		if batch.Parent.Path == "" {
 			tb.Error("Parent path is empty!")
 		}
-		if batch.Parent.err != nil {
+		if batch.Parent.Err != nil {
 			return ActionContinue, nil
 		}
-		if batch.Parent.info == nil {
+		if batch.Parent.Info == nil {
 			tb.Error("No error but info is nil!")
 		}
 		for i := range batch.RegFiles {
-			if batch.RegFiles[i].info.Name() == "helloworld.go" {
+			if batch.RegFiles[i].Info.Name() == "helloworld.go" {
 				isFound = true
 				return ActionExit, nil
 			}
 		}
 		if depth == 0 {
 			for i := range batch.Dirs {
-				if batch.Dirs[i].info.Name() == "src" {
+				if batch.Dirs[i].Info.Name() == "src" {
 					return ActionSkipDir, map[string]bool{
-						batch.Dirs[i].path: true,
+						batch.Dirs[i].Path: true,
 					}
 				}
 			}

@@ -3,9 +3,9 @@ package gotfp
 import "os"
 
 type FInfo struct {
-	path string
-	info os.FileInfo
-	err  error
+	Path string
+	Info os.FileInfo
+	Err  error
 }
 
 type Batch struct {
