@@ -65,8 +65,10 @@ func makeTraverseBatchesHandler(batchHandler BatchHandler) taskHandler {
 					batch.Symlinks = append(batch.Symlinks, fInfo)
 				} else if info.IsDir() {
 					batch.Dirs = append(batch.Dirs, fInfo)
-				} else {
+				} else if info.Mode().IsRegular() {
 					batch.RegFiles = append(batch.RegFiles, fInfo)
+				} else {
+					batch.Others = append(batch.Others, fInfo)
 				}
 			}
 			info = task.fInfo.Info
@@ -81,8 +83,7 @@ func makeTraverseBatchesHandler(batchHandler BatchHandler) taskHandler {
 		case ActionExit:
 			return nil, true
 		case ActionSkipDir:
-			if info == nil || !info.IsDir() ||
-				(info.Mode()&os.ModeSymlink) != 0 {
+			if info == nil || !info.IsDir() {
 				*errBuf = append(*errBuf, ErrNoDirToSkip)
 				return
 			}

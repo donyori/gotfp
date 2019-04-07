@@ -13,6 +13,7 @@ type Batch struct {
 	Dirs     []FInfo
 	RegFiles []FInfo
 	Symlinks []FInfo
+	Others   []FInfo
 	Errs     []FInfo
 }
 

@@ -55,8 +55,7 @@ func makeTraverseFilesHandler(fileHandler FileHandler) taskHandler {
 		case ActionExit:
 			return nil, true
 		case ActionSkipDir:
-			if info == nil || !info.IsDir() ||
-				(info.Mode()&os.ModeSymlink) != 0 {
+			if info == nil || !info.IsDir() {
 				*errBuf = append(*errBuf, ErrNoDirToSkip)
 			}
 			return
