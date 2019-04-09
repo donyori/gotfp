@@ -47,11 +47,8 @@ func TestFindFile(t *testing.T) {
 	}()
 
 	defer close(errChan)
-	err := TraverseFiles(handler, testMaxProcs,
+	TraverseFiles(handler, testMaxProcs,
 		errChan, time.Microsecond, testRoot)
-	if err != nil {
-		t.Error(err)
-	}
 }
 
 func TestFindFileWithBatch(t *testing.T) {
@@ -88,11 +85,8 @@ func TestFindFileWithBatch(t *testing.T) {
 	}()
 
 	defer close(errChan)
-	err := TraverseBatches(handler, testMaxProcs,
+	TraverseBatches(handler, testMaxProcs,
 		errChan, time.Microsecond, testRoot)
-	if err != nil {
-		t.Error(err)
-	}
 }
 
 // Use path/filepath.Walk() to do the same thing as above test.
@@ -169,28 +163,20 @@ func BenchmarkFindFile(b *testing.B) {
 	for _, bm := range benchmarks {
 		b.Run("f-"+bm.nameSuffix, func(b *testing.B) {
 			handler := testFindFileMakeFileHandler(b, nil)
-			var err error
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				err = TraverseFiles(handler, bm.workerNumber,
+				TraverseFiles(handler, bm.workerNumber,
 					errChan, 0, testRoot)
-				if err != nil {
-					b.Error(err)
-				}
 			}
 		})
 	}
 	for _, bm := range benchmarks {
 		b.Run("b-"+bm.nameSuffix, func(b *testing.B) {
 			handler := testFindFileMakeBatchHandler(b, nil)
-			var err error
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				err = TraverseBatches(handler, bm.workerNumber,
+				TraverseBatches(handler, bm.workerNumber,
 					errChan, 0, testRoot)
-				if err != nil {
-					b.Error(err)
-				}
 			}
 		})
 	}

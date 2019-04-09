@@ -13,7 +13,7 @@ func callDfw(handler taskHandler,
 	workerNumber int,
 	workerErrChan chan<- error,
 	workerSendErrTimeout time.Duration,
-	roots ...string) error {
+	roots ...string) {
 	its := make([]interface{}, 0, len(roots))
 	for _, root := range roots {
 		its = append(its, &tTask{
@@ -39,7 +39,7 @@ func callDfw(handler taskHandler,
 		}
 		return newTasks, false
 	}
-	return dfw.DoEx(prefab.LdgbTaskManagerMaker, h, gocommfw.WorkerSettings{
+	dfw.DoEx(prefab.LdgbTaskManagerMaker, h, gocommfw.WorkerSettings{
 		Number:         int32(workerNumber),
 		SendErrTimeout: workerSendErrTimeout,
 	}, workerErrChan, its...)

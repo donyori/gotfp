@@ -1,6 +1,8 @@
 package gotfp
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -10,21 +12,22 @@ func TraverseFiles(handler FileHandler,
 	workerNumber int,
 	workerErrChan chan<- error,
 	workerSendErrTimeout time.Duration,
-	roots ...string) error {
+	roots ...string) {
 	if handler == nil {
-		return ErrNilHandler
+		panic(errors.New("gotfp: file handler is nil"))
 	}
 	if workerNumber <= 0 {
-		return ErrNonPositiveWorkerNumber
+		panic(fmt.Errorf(
+			"gotfp: the number of workers is non-positive (%d)",
+			workerNumber))
 	}
 	if len(roots) == 0 {
 		// No file to traverse. Just exit.
-		return nil
+		return
 	}
 	h := makeTraverseFilesHandler(handler)
-	err := callDfw(h, workerNumber, workerErrChan,
+	callDfw(h, workerNumber, workerErrChan,
 		workerSendErrTimeout, roots...)
-	return err
 }
 
 // Ensure fileHandler != nil.
