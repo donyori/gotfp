@@ -63,7 +63,7 @@ func makeTraverseFilesHandler(fileHandler FileHandler) taskHandler {
 			}
 			return
 		default:
-			*errBuf = append(*errBuf, ErrUnknownAction)
+			*errBuf = append(*errBuf, NewUnknownActionError(action))
 		}
 		if len(dirNames) == 0 {
 			return

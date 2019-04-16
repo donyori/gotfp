@@ -110,7 +110,7 @@ func makeTraverseBatchesHandler(batchHandler BatchHandler) taskHandler {
 			}
 			return
 		default:
-			*errBuf = append(*errBuf, ErrUnknownAction)
+			*errBuf = append(*errBuf, NewUnknownActionError(action))
 		}
 		nextFiles = dirs
 		return
