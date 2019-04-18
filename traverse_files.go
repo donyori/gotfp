@@ -2,32 +2,25 @@ package gotfp
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
-	"time"
+
+	"github.com/donyori/gocommfw"
 )
 
 func TraverseFiles(handler FileHandler,
-	workerNumber int,
+	workerSettings gocommfw.WorkerSettings,
 	workerErrChan chan<- error,
-	workerSendErrTimeout time.Duration,
 	roots ...string) {
 	if handler == nil {
 		panic(errors.New("gotfp: file handler is nil"))
-	}
-	if workerNumber <= 0 {
-		panic(fmt.Errorf(
-			"gotfp: the number of workers is non-positive (%d)",
-			workerNumber))
 	}
 	if len(roots) == 0 {
 		// No file to traverse. Just exit.
 		return
 	}
 	h := makeTraverseFilesHandler(handler)
-	callDfw(h, workerNumber, workerErrChan,
-		workerSendErrTimeout, roots...)
+	callDfw(h, workerSettings, workerErrChan, roots...)
 }
 
 // Ensure fileHandler != nil.

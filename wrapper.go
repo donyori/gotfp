@@ -1,18 +1,15 @@
 package gotfp
 
 import (
-	"time"
-
 	"github.com/donyori/gocommfw"
 	"github.com/donyori/gocommfw/dfw"
 	"github.com/donyori/gocommfw/prefab"
 )
 
-// Ensure handler != nil && workerNumber > 0 && len(roots) > 0.
+// Ensure handler != nil && len(roots) > 0.
 func callDfw(handler taskHandler,
-	workerNumber int,
+	workerSettings gocommfw.WorkerSettings,
 	workerErrChan chan<- error,
-	workerSendErrTimeout time.Duration,
 	roots ...string) {
 	its := make([]interface{}, 0, len(roots))
 	for _, root := range roots {
@@ -39,8 +36,6 @@ func callDfw(handler taskHandler,
 		}
 		return newTasks, false
 	}
-	dfw.DoEx(prefab.LdgbTaskManagerMaker, h, gocommfw.WorkerSettings{
-		Number:         int32(workerNumber),
-		SendErrTimeout: workerSendErrTimeout,
-	}, workerErrChan, its...)
+	dfw.DoEx(prefab.LdgbTaskManagerMaker, h,
+		workerSettings, workerErrChan, its...)
 }

@@ -2,32 +2,25 @@ package gotfp
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
-	"time"
+
+	"github.com/donyori/gocommfw"
 )
 
 func TraverseBatches(handler BatchHandler,
-	workerNumber int,
+	workerSettings gocommfw.WorkerSettings,
 	workerErrChan chan<- error,
-	workerSendErrTimeout time.Duration,
 	roots ...string) {
 	if handler == nil {
 		panic(errors.New("gotfp: batch handler is nil"))
-	}
-	if workerNumber <= 0 {
-		panic(fmt.Errorf(
-			"gotfp: the number of workers is non-positive (%d)",
-			workerNumber))
 	}
 	if len(roots) == 0 {
 		// No batch to traverse. Just exit.
 		return
 	}
 	h := makeTraverseBatchesHandler(handler)
-	callDfw(h, workerNumber, workerErrChan,
-		workerSendErrTimeout, roots...)
+	callDfw(h, workerSettings, workerErrChan, roots...)
 }
 
 // Ensure batchHandler != nil.

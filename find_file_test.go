@@ -7,6 +7,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/donyori/gocommfw"
 )
 
 // Task:
@@ -47,8 +49,10 @@ func TestFindFile(t *testing.T) {
 	}()
 
 	defer close(errChan)
-	TraverseFiles(handler, testMaxProcs,
-		errChan, time.Microsecond, testRoot)
+	TraverseFiles(handler, gocommfw.WorkerSettings{
+		Number:         uint32(testMaxProcs),
+		SendErrTimeout: time.Microsecond,
+	}, errChan, testRoot)
 }
 
 func TestFindFileWithBatch(t *testing.T) {
@@ -85,8 +89,10 @@ func TestFindFileWithBatch(t *testing.T) {
 	}()
 
 	defer close(errChan)
-	TraverseBatches(handler, testMaxProcs,
-		errChan, time.Microsecond, testRoot)
+	TraverseBatches(handler, gocommfw.WorkerSettings{
+		Number:         uint32(testMaxProcs),
+		SendErrTimeout: time.Microsecond,
+	}, errChan, testRoot)
 }
 
 // Use path/filepath.Walk() to do the same thing as above test.
@@ -165,8 +171,10 @@ func BenchmarkFindFile(b *testing.B) {
 			handler := testFindFileMakeFileHandler(b, nil)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				TraverseFiles(handler, bm.workerNumber,
-					errChan, 0, testRoot)
+				TraverseFiles(handler, gocommfw.WorkerSettings{
+					Number:         uint32(bm.workerNumber),
+					SendErrTimeout: 0,
+				}, errChan, testRoot)
 			}
 		})
 	}
@@ -175,8 +183,10 @@ func BenchmarkFindFile(b *testing.B) {
 			handler := testFindFileMakeBatchHandler(b, nil)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				TraverseBatches(handler, bm.workerNumber,
-					errChan, 0, testRoot)
+				TraverseBatches(handler, gocommfw.WorkerSettings{
+					Number:         uint32(bm.workerNumber),
+					SendErrTimeout: 0,
+				}, errChan, testRoot)
 			}
 		})
 	}
