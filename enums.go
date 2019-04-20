@@ -1,19 +1,17 @@
 package gotfp
 
-import (
-	"encoding/json"
-	"strings"
-)
+import "strings"
 
 type Action int8
 
 const (
-	ActionContinue Action = iota
+	ActionContinue Action = iota + 1
 	ActionExit
 	ActionSkipDir
 )
 
 var actionStrings = [...]string{
+	"Unknown",
 	"Continue",
 	"Exit",
 	"SkipDir",
@@ -25,27 +23,21 @@ func ParseAction(s string) Action {
 			return Action(i)
 		}
 	}
-	return -1 // Stands for "Unknown".
+	return 0 // Stands for "Unknown".
 }
 
 func (a Action) String() string {
 	if a < ActionContinue || a > ActionSkipDir {
-		return "Unknown"
+		return actionStrings[0]
 	}
 	return actionStrings[a]
 }
 
-func (a Action) MarshalJSON() ([]byte, error) {
-	s := a.String()
-	return json.Marshal(s)
+func (a Action) MarshalText() ([]byte, error) {
+	return []byte(a.String()), nil
 }
 
-func (a *Action) UnmarshalJSON(data []byte) error {
-	var s string
-	err := json.Unmarshal(data, &s)
-	if err != nil {
-		return err
-	}
-	*a = ParseAction(s)
+func (a *Action) UnmarshalText(text []byte) error {
+	*a = ParseAction(string(text))
 	return nil
 }
