@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/donyori/gocommfw"
+	"github.com/donyori/goctpf"
 )
 
 // Task:
@@ -49,7 +49,7 @@ func TestFindFile(t *testing.T) {
 	}()
 
 	defer close(errChan)
-	TraverseFiles(handler, gocommfw.WorkerSettings{
+	TraverseFiles(handler, goctpf.WorkerSettings{
 		Number:         uint32(testMaxProcs),
 		SendErrTimeout: time.Microsecond,
 	}, errChan, testRoot)
@@ -89,7 +89,7 @@ func TestFindFileWithBatch(t *testing.T) {
 	}()
 
 	defer close(errChan)
-	TraverseBatches(handler, gocommfw.WorkerSettings{
+	TraverseBatches(handler, goctpf.WorkerSettings{
 		Number:         uint32(testMaxProcs),
 		SendErrTimeout: time.Microsecond,
 	}, errChan, testRoot)
@@ -138,8 +138,8 @@ func BenchmarkFindFile(b *testing.B) {
 	errChan := make(chan error, 10)
 	doneChan := make(chan struct{})
 	benchmarks := []struct {
-		nameSuffix   string
-		workerNumber int
+		nameSuffix string
+		numWorker  int
 	}{
 		{"wn=1", 1},
 		{"wn=2", 2},
@@ -171,8 +171,8 @@ func BenchmarkFindFile(b *testing.B) {
 			handler := testFindFileMakeFileHandler(b, nil)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				TraverseFiles(handler, gocommfw.WorkerSettings{
-					Number:         uint32(bm.workerNumber),
+				TraverseFiles(handler, goctpf.WorkerSettings{
+					Number:         uint32(bm.numWorker),
 					SendErrTimeout: 0,
 				}, errChan, testRoot)
 			}
@@ -183,8 +183,8 @@ func BenchmarkFindFile(b *testing.B) {
 			handler := testFindFileMakeBatchHandler(b, nil)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				TraverseBatches(handler, gocommfw.WorkerSettings{
-					Number:         uint32(bm.workerNumber),
+				TraverseBatches(handler, goctpf.WorkerSettings{
+					Number:         uint32(bm.numWorker),
 					SendErrTimeout: 0,
 				}, errChan, testRoot)
 			}

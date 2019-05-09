@@ -1,14 +1,14 @@
 package gotfp
 
 import (
-	"github.com/donyori/gocommfw"
-	"github.com/donyori/gocommfw/dfw"
-	"github.com/donyori/gocommfw/prefab"
+	"github.com/donyori/goctpf"
+	"github.com/donyori/goctpf/idtpf/dfw"
+	"github.com/donyori/goctpf/prefab"
 )
 
 // Ensure handler != nil && len(roots) > 0.
 func callDfw(handler taskHandler,
-	workerSettings gocommfw.WorkerSettings,
+	workerSettings goctpf.WorkerSettings,
 	workerErrChan chan<- error,
 	roots ...string) {
 	its := make([]interface{}, 0, len(roots))

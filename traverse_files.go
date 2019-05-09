@@ -5,11 +5,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/donyori/gocommfw"
+	"github.com/donyori/goctpf"
 )
 
 func TraverseFiles(handler FileHandler,
-	workerSettings gocommfw.WorkerSettings,
+	workerSettings goctpf.WorkerSettings,
 	workerErrChan chan<- error,
 	roots ...string) {
 	if handler == nil {
