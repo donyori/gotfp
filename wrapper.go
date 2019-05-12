@@ -36,6 +36,6 @@ func callDfw(handler taskHandler,
 		}
 		return newTasks, false
 	}
-	dfw.DoEx(prefab.LdgbTaskManagerMaker, h, nil,
+	dfw.DoEx(prefab.LdgbTaskManagerMaker, h, nil, nil,
 		workerSettings, workerErrChan, its...)
 }
