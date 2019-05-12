@@ -18,7 +18,7 @@ func callDfw(handler taskHandler,
 			depth: 0,
 		})
 	}
-	h := func(task interface{}, errBuf *[]error) (
+	h := func(workerNo int, task interface{}, errBuf *[]error) (
 		newTasks []interface{}, doesExit bool) {
 		t := task.(*tTask)
 		nextFiles, doesExit := handler(t, errBuf)
@@ -36,6 +36,6 @@ func callDfw(handler taskHandler,
 		}
 		return newTasks, false
 	}
-	dfw.DoEx(prefab.LdgbTaskManagerMaker, h,
+	dfw.DoEx(prefab.LdgbTaskManagerMaker, h, nil,
 		workerSettings, workerErrChan, its...)
 }
