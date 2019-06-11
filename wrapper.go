@@ -14,8 +14,8 @@ func callDfw(handler taskHandler,
 	its := make([]interface{}, 0, len(roots))
 	for _, root := range roots {
 		its = append(its, &tTask{
-			fInfo: FInfo{Path: root},
-			depth: 0,
+			fileInfo: FileInfo{Path: root},
+			depth:    0,
 		})
 	}
 	h := func(workerNo int, task interface{}, errBuf *[]error) (
@@ -29,8 +29,8 @@ func callDfw(handler taskHandler,
 		newDepth := t.depth + 1
 		for i := range nextFiles {
 			newT := &tTask{
-				fInfo: nextFiles[i],
-				depth: newDepth,
+				fileInfo: nextFiles[i],
+				depth:    newDepth,
 			}
 			newTasks = append(newTasks, newT)
 		}

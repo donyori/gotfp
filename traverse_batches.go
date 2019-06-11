@@ -26,12 +26,12 @@ func TraverseBatches(handler BatchHandler,
 // Ensure batchHandler != nil.
 func makeTraverseBatchesHandler(batchHandler BatchHandler) taskHandler {
 	h := func(task *tTask, errBuf *[]error) (
-		nextFiles []FInfo, doesExit bool) {
+		nextFiles []FileInfo, doesExit bool) {
 		var dirNames []string
 		var batch Batch
-		path := task.fInfo.Path
-		info := task.fInfo.Info
-		err := task.fInfo.Err
+		path := task.fileInfo.Path
+		info := task.fileInfo.Info
+		err := task.fileInfo.Err
 		if err == nil {
 			if info == nil {
 				// Didn't get file stat. Get it now.
@@ -43,14 +43,14 @@ func makeTraverseBatchesHandler(batchHandler BatchHandler) taskHandler {
 				dirNames, err = readDirNames(path)
 			}
 		}
-		task.fInfo.Info = info
-		task.fInfo.Err = err
-		batch.Parent = task.fInfo
+		task.fileInfo.Info = info
+		task.fileInfo.Err = err
+		batch.Parent = task.fileInfo
 		if len(dirNames) > 0 {
 			for _, name := range dirNames {
 				dirPath := filepath.Join(path, name)
 				info, err = os.Lstat(dirPath)
-				fInfo := FInfo{
+				fInfo := FileInfo{
 					Path: dirPath,
 					Info: info,
 					Err:  err,
@@ -67,7 +67,7 @@ func makeTraverseBatchesHandler(batchHandler BatchHandler) taskHandler {
 					batch.Others = append(batch.Others, fInfo)
 				}
 			}
-			info = task.fInfo.Info
+			info = task.fileInfo.Info
 		}
 		// Copy batch.Dirs. See https://github.com/go101/go101/wiki for details.
 		dirs := append(batch.Dirs[:0:0], batch.Dirs...)

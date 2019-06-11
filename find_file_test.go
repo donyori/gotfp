@@ -206,7 +206,7 @@ func BenchmarkFindFile(b *testing.B) {
 
 func testFindFileMakeFileHandler(tb testing.TB, counter *uint64) FileHandler {
 	isFound := false
-	return func(info FInfo, depth int) Action {
+	return func(info FileInfo, depth int) Action {
 		if counter != nil {
 			atomic.AddUint64(counter, 1)
 		}
