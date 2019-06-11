@@ -11,7 +11,7 @@ func callDfw(handler taskHandler,
 	workerSettings goctpf.WorkerSettings,
 	workerErrChan chan<- error,
 	roots ...string) {
-	its := make([]interface{}, 0, len(roots))
+	its := make([]interface{}, 0, len(roots)) // initial tasks
 	for _, root := range roots {
 		its = append(its, &tTask{
 			fileInfo: FileInfo{Path: root},
