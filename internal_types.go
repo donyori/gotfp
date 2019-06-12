@@ -3,10 +3,11 @@ package gotfp
 // Traversing task.
 // One task for one file.
 type tTask struct {
-	fileInfo FileInfo
-	depth    int
+	FileInfo FileInfo
+	Depth    int
+	ExInfo   interface{}
 }
 
 // There should be no nil *FInfo in "nextFiles"!
 type taskHandler func(task *tTask, errBuf *[]error) (
-	nextFiles []FileInfo, doesExit bool)
+	newTasks []*tTask, doesExit bool)

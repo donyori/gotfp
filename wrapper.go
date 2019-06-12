@@ -1,6 +1,8 @@
 package gotfp
 
 import (
+	"path/filepath"
+
 	"github.com/donyori/goctpf"
 	"github.com/donyori/goctpf/idtpf/dfw"
 	"github.com/donyori/goctpf/prefab"
@@ -12,27 +14,31 @@ func callDfw(handler taskHandler,
 	workerErrChan chan<- error,
 	roots ...string) {
 	its := make([]interface{}, 0, len(roots)) // initial tasks
-	for _, root := range roots {
+	for i := range roots {
+		// Try to get absolute path.
+		root, err := filepath.Abs(roots[i])
+		if err != nil {
+			root = filepath.Clean(roots[i])
+		}
 		its = append(its, &tTask{
-			fileInfo: FileInfo{Path: root},
-			depth:    0,
+			FileInfo: FileInfo{Path: root},
+			Depth:    0,
 		})
 	}
 	h := func(workerNo int, task interface{}, errBuf *[]error) (
 		newTasks []interface{}, doesExit bool) {
 		t := task.(*tTask)
-		nextFiles, doesExit := handler(t, errBuf)
-		if doesExit || len(nextFiles) == 0 {
+		nextTasks, doesExit := handler(t, errBuf)
+		if doesExit || len(nextTasks) == 0 {
 			return nil, doesExit
 		}
-		newTasks = make([]interface{}, 0, len(nextFiles))
-		newDepth := t.depth + 1
-		for i := range nextFiles {
-			newT := &tTask{
-				fileInfo: nextFiles[i],
-				depth:    newDepth,
+		newTasks = make([]interface{}, 0, len(nextTasks))
+		newDepth := t.Depth + 1
+		for _, newTask := range nextTasks {
+			if newTask.Depth <= 0 {
+				newTask.Depth = newDepth
 			}
-			newTasks = append(newTasks, newT)
+			newTasks = append(newTasks, newTask)
 		}
 		return newTasks, false
 	}

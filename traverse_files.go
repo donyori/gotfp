@@ -25,12 +25,11 @@ func TraverseFiles(handler FileHandler,
 
 // Ensure fileHandler != nil.
 func makeTraverseFilesHandler(fileHandler FileHandler) taskHandler {
-	h := func(task *tTask, errBuf *[]error) (
-		nextFiles []FileInfo, doesExit bool) {
+	h := func(task *tTask, errBuf *[]error) (newTasks []*tTask, doesExit bool) {
 		var dirNames []string
-		path := task.fileInfo.Path
-		info := task.fileInfo.Info
-		err := task.fileInfo.Err
+		path := task.FileInfo.Path
+		info := task.FileInfo.Info
+		err := task.FileInfo.Err
 		if err == nil {
 			if info == nil {
 				// Didn't get file stat. Get it now.
@@ -42,9 +41,9 @@ func makeTraverseFilesHandler(fileHandler FileHandler) taskHandler {
 				dirNames, err = readDirNames(path)
 			}
 		}
-		task.fileInfo.Info = info
-		task.fileInfo.Err = err
-		action := fileHandler(task.fileInfo, task.depth)
+		task.FileInfo.Info = info
+		task.FileInfo.Err = err
+		action := fileHandler(task.FileInfo, task.Depth)
 		switch action {
 		case ActionContinue:
 			// Do nothing here.
@@ -61,15 +60,15 @@ func makeTraverseFilesHandler(fileHandler FileHandler) taskHandler {
 		if len(dirNames) == 0 {
 			return
 		}
-		nextFiles = make([]FileInfo, 0, len(dirNames))
-		for _, name := range dirNames {
-			nextPath := filepath.Join(path, name)
+		newTasks = make([]*tTask, 0, len(dirNames))
+		for i := range dirNames {
+			nextPath := filepath.Join(path, dirNames[i])
 			info, err = os.Lstat(nextPath)
-			nextFiles = append(nextFiles, FileInfo{
+			newTasks = append(newTasks, &tTask{FileInfo: FileInfo{
 				Path: nextPath,
 				Info: info,
 				Err:  err,
-			})
+			}})
 		}
 		return
 	} // End of func h.

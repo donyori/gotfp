@@ -25,13 +25,11 @@ func TraverseBatches(handler BatchHandler,
 
 // Ensure batchHandler != nil.
 func makeTraverseBatchesHandler(batchHandler BatchHandler) taskHandler {
-	h := func(task *tTask, errBuf *[]error) (
-		nextFiles []FileInfo, doesExit bool) {
+	h := func(task *tTask, errBuf *[]error) (newTasks []*tTask, doesExit bool) {
 		var dirNames []string
-		var batch Batch
-		path := task.fileInfo.Path
-		info := task.fileInfo.Info
-		err := task.fileInfo.Err
+		path := task.FileInfo.Path
+		info := task.FileInfo.Info
+		err := task.FileInfo.Err
 		if err == nil {
 			if info == nil {
 				// Didn't get file stat. Get it now.
@@ -43,15 +41,15 @@ func makeTraverseBatchesHandler(batchHandler BatchHandler) taskHandler {
 				dirNames, err = readDirNames(path)
 			}
 		}
-		task.fileInfo.Info = info
-		task.fileInfo.Err = err
-		batch.Parent = task.fileInfo
+		task.FileInfo.Info = info
+		task.FileInfo.Err = err
+		batch := Batch{Parent: task.FileInfo}
 		if len(dirNames) > 0 {
 			for _, name := range dirNames {
-				dirPath := filepath.Join(path, name)
-				info, err = os.Lstat(dirPath)
+				childPath := filepath.Join(path, name)
+				info, err = os.Lstat(childPath)
 				fInfo := FileInfo{
-					Path: dirPath,
+					Path: childPath,
 					Info: info,
 					Err:  err,
 				}
@@ -67,11 +65,11 @@ func makeTraverseBatchesHandler(batchHandler BatchHandler) taskHandler {
 					batch.Others = append(batch.Others, fInfo)
 				}
 			}
-			info = task.fileInfo.Info
+			info = task.FileInfo.Info
 		}
 		// Copy batch.Dirs. See https://github.com/go101/go101/wiki for details.
 		dirs := append(batch.Dirs[:0:0], batch.Dirs...)
-		action, skipDirs := batchHandler(batch, task.depth)
+		action, skipDirs := batchHandler(batch, task.Depth)
 		switch action {
 		case ActionContinue:
 			// Do nothing here.
@@ -97,7 +95,12 @@ func makeTraverseBatchesHandler(batchHandler BatchHandler) taskHandler {
 				}
 				j++
 			}
-			nextFiles = dirs[:j]
+			if j > 0 {
+				newTasks = make([]*tTask, 0, j)
+				for k := 0; k < j; k++ {
+					newTasks = append(newTasks, &tTask{FileInfo: dirs[k]})
+				}
+			}
 			if i == j {
 				*errBuf = append(*errBuf, ErrNoDirToSkip)
 			}
@@ -105,7 +108,12 @@ func makeTraverseBatchesHandler(batchHandler BatchHandler) taskHandler {
 		default:
 			*errBuf = append(*errBuf, NewUnknownActionError(action))
 		}
-		nextFiles = dirs
+		if len(dirs) > 0 {
+			newTasks = make([]*tTask, 0, len(dirs))
+			for i := range dirs {
+				newTasks = append(newTasks, &tTask{FileInfo: dirs[i]})
+			}
+		}
 		return
 	} // End of func h.
 	return h
