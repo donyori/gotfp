@@ -37,7 +37,7 @@ func makeTraverseFilesWithBatchHandler(
 				info, err = os.Lstat(path)
 			}
 			if err == nil && info != nil && info.IsDir() &&
-				(info.Mode()&os.ModeSymlink) == 0 {
+				info.Mode()&os.ModeSymlink == 0 {
 				// Get the name of files under this directory.
 				dirNames, err = readDirNames(path)
 			}
@@ -56,14 +56,14 @@ func makeTraverseFilesWithBatchHandler(
 				if err == nil {
 					batch.Parent.Info = info
 					if info != nil && info.IsDir() &&
-						(info.Mode()&os.ModeSymlink) == 0 {
+						info.Mode()&os.ModeSymlink == 0 {
 						siblingNames, err := readDirNames(parent)
 						if err != nil {
 							batch.Parent.Err = err
 						}
 						if len(siblingNames) > 0 {
 							pathBase := filepath.Base(path)
-							var locationSliceId int
+							locationSliceId := -1
 							// Don't set location.Slice during the loop,
 							// because it may be changed by append().
 							for _, name := range siblingNames {
@@ -85,7 +85,7 @@ func makeTraverseFilesWithBatchHandler(
 										locationSliceId = 4
 										location.Index = len(batch.Errs) - 1
 									}
-								} else if (info.Mode() & os.ModeSymlink) != 0 {
+								} else if info.Mode()&os.ModeSymlink != 0 {
 									batch.Symlinks = append(batch.Symlinks, fInfo)
 									if pathBase == name {
 										locationSliceId = 2
@@ -149,10 +149,8 @@ func makeTraverseFilesWithBatchHandler(
 			return
 		}
 		batch := &Batch{Parent: task.FileInfo}
-		childPaths := make([]string, len(dirNames))
 		for i := range dirNames {
 			childPath := filepath.Join(path, dirNames[i])
-			childPaths[i] = childPath
 			info, err = os.Lstat(childPath)
 			fInfo := FileInfo{
 				Path: childPath,
@@ -161,7 +159,7 @@ func makeTraverseFilesWithBatchHandler(
 			}
 			if err != nil || info == nil {
 				batch.Errs = append(batch.Errs, fInfo)
-			} else if (info.Mode() & os.ModeSymlink) != 0 {
+			} else if info.Mode()&os.ModeSymlink != 0 {
 				batch.Symlinks = append(batch.Symlinks, fInfo)
 			} else if info.IsDir() {
 				batch.Dirs = append(batch.Dirs, fInfo)
@@ -171,53 +169,21 @@ func makeTraverseFilesWithBatchHandler(
 				batch.Others = append(batch.Others, fInfo)
 			}
 		}
-		var indexes [5]int
-		newTasks = make([]*tTask, 0, len(childPaths))
-		for _, childPath := range childPaths {
-			if len(batch.Dirs) > 0 &&
-				childPath == batch.Dirs[indexes[0]].Path {
+		newTasks = make([]*tTask, 0, len(dirNames))
+		slices := [...][]FileInfo{batch.Errs, batch.RegFiles,
+			batch.Others, batch.Symlinks, batch.Dirs}
+		for _, slice := range slices {
+			for i := range slice {
 				location = &LocationBatchInfo{
 					Batch: batch,
-					Slice: batch.Dirs,
-					Index: indexes[0],
+					Slice: slice,
+					Index: i,
 				}
-				indexes[0]++
-			} else if len(batch.RegFiles) > 0 &&
-				childPath == batch.RegFiles[indexes[1]].Path {
-				location = &LocationBatchInfo{
-					Batch: batch,
-					Slice: batch.RegFiles,
-					Index: indexes[1],
-				}
-				indexes[1]++
-			} else if len(batch.Symlinks) > 0 &&
-				childPath == batch.Symlinks[indexes[2]].Path {
-				location = &LocationBatchInfo{
-					Batch: batch,
-					Slice: batch.Symlinks,
-					Index: indexes[2],
-				}
-				indexes[2]++
-			} else if len(batch.Others) > 0 &&
-				childPath == batch.Others[indexes[3]].Path {
-				location = &LocationBatchInfo{
-					Batch: batch,
-					Slice: batch.Others,
-					Index: indexes[3],
-				}
-				indexes[3]++
-			} else {
-				location = &LocationBatchInfo{
-					Batch: batch,
-					Slice: batch.Errs,
-					Index: indexes[4],
-				}
-				indexes[4]++
+				newTasks = append(newTasks, &tTask{
+					FileInfo: slice[i],
+					ExInfo:   location,
+				})
 			}
-			newTasks = append(newTasks, &tTask{
-				FileInfo: location.Slice[location.Index],
-				ExInfo:   location,
-			})
 		}
 		return
 	} // End of func h.

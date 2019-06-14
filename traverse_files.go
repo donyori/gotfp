@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/donyori/goctpf"
 )
@@ -70,6 +71,41 @@ func makeTraverseFilesHandler(fileHandler FileHandler) taskHandler {
 				Err:  err,
 			}})
 		}
+		sort.Slice(newTasks, func(i, j int) bool {
+			t1 := newTasks[i]
+			t2 := newTasks[j]
+			info1 := t1.FileInfo.Info
+			info2 := t2.FileInfo.Info
+			if t1.FileInfo.Err != nil || info1 == nil {
+				return t2.FileInfo.Err == nil && info2 != nil ||
+					t1.FileInfo.Path < t2.FileInfo.Path
+			}
+			if t2.FileInfo.Err != nil || info2 == nil {
+				return false
+			}
+			if info1.IsDir() && info1.Mode()&os.ModeSymlink == 0 {
+				return info2.IsDir() && info2.Mode()&os.ModeSymlink == 0 &&
+					t1.FileInfo.Path < t2.FileInfo.Path
+			}
+			if info2.IsDir() && info2.Mode()&os.ModeSymlink == 0 {
+				return true
+			}
+			if info1.Mode().IsRegular() {
+				return !info2.Mode().IsRegular() ||
+					t1.FileInfo.Path < t2.FileInfo.Path
+			}
+			if info2.Mode().IsRegular() {
+				return false
+			}
+			if info1.Mode()&os.ModeSymlink != 0 {
+				return info2.Mode()&os.ModeSymlink == 0 ||
+					t1.FileInfo.Path < t2.FileInfo.Path
+			}
+			if info2.Mode()&os.ModeSymlink != 0 {
+				return false
+			}
+			return t1.FileInfo.Path < t2.FileInfo.Path
+		})
 		return
 	} // End of func h.
 	return h
