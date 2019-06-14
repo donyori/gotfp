@@ -49,7 +49,7 @@ func makeTraverseFilesWithBatchHandler(
 			location = task.ExInfo.(*LocationBatchInfo)
 		} else if path != "" {
 			parent := filepath.Dir(path)
-			if parent != "." && parent != path {
+			if parent != path { // path is not a root file path.
 				batch := &Batch{Parent: FileInfo{Path: parent}}
 				location = &LocationBatchInfo{Batch: batch}
 				info, err = os.Lstat(parent)

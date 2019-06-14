@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sync/atomic"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/donyori/goctpf"
 )
@@ -55,7 +57,7 @@ func TestFindFile(t *testing.T) {
 	}, errChan, testRoot)
 }
 
-func TestFindFileWithBatch(t *testing.T) {
+func TestFindFileByBatch(t *testing.T) {
 	var counter uint64
 	handler := testFindFileMakeBatchHandler(t, &counter)
 	errChan := make(chan error, 10)
@@ -95,8 +97,48 @@ func TestFindFileWithBatch(t *testing.T) {
 	}, errChan, testRoot)
 }
 
+func TestFindFileByFileWithBatch(t *testing.T) {
+	var counter uint64
+	handler := testFindFileMakeFileWithBatchHandler(t, &counter)
+	errChan := make(chan error, 10)
+	doneChan := make(chan struct{})
+	ticker := time.NewTicker(time.Second)
+	go func() {
+		// t.Log("Daemon start")
+		fmt.Println("Daemon start")
+		// defer t.Log("Daemon done")
+		defer fmt.Println("Daemon done")
+		defer close(doneChan)
+		for {
+			select {
+			case err, ok := <-errChan:
+				if !ok {
+					return
+				}
+				t.Error(err)
+			case now := <-ticker.C:
+				t.Log(now, "handler called", atomic.LoadUint64(&counter), "times")
+				fmt.Println(now, "handler called", atomic.LoadUint64(&counter), "times")
+			}
+		}
+	}()
+	defer func() {
+		ticker.Stop()
+		// t.Log("Wait for daemon stop")
+		fmt.Println("Wait for daemon stop")
+		<-doneChan
+		t.Log("Finally, handler called", atomic.LoadUint64(&counter), "times")
+	}()
+
+	defer close(errChan)
+	TraverseFilesWithBatch(handler, goctpf.WorkerSettings{
+		Number:         uint32(testMaxProcs),
+		SendErrTimeout: time.Microsecond,
+	}, errChan, testRoot)
+}
+
 // Use path/filepath.Walk() to do the same thing as above test.
-func TestFindFileWithWalk(t *testing.T) {
+func TestFindFileByWalk(t *testing.T) {
 	var counter uint64
 	walkFn := testFindFileMakeWalkFn(t, testRoot, &counter)
 	daemonExitChan := make(chan struct{})
@@ -275,6 +317,52 @@ func testFindFileMakeBatchHandler(tb testing.TB, counter *uint64) BatchHandler {
 	}
 }
 
+func testFindFileMakeFileWithBatchHandler(tb testing.TB, counter *uint64) FileWithBatchHandler {
+	isFound := false
+	return func(info FileInfo, location *LocationBatchInfo, depth int) Action {
+		if counter != nil {
+			atomic.AddUint64(counter, 1)
+		}
+		if isFound {
+			return ActionExit
+		}
+		if location == nil {
+			tb.Error("location is nil")
+		} else if location.Batch == nil {
+			tb.Error("location.Batch is nil")
+		} else if !fileInfoSliceHeaderEqual(location.Batch.Dirs, location.Slice) &&
+			!fileInfoSliceHeaderEqual(location.Batch.RegFiles, location.Slice) &&
+			!fileInfoSliceHeaderEqual(location.Batch.Symlinks, location.Slice) &&
+			!fileInfoSliceHeaderEqual(location.Batch.Others, location.Slice) &&
+			!fileInfoSliceHeaderEqual(location.Batch.Errs, location.Slice) {
+			tb.Error("location.Slice is NOT in location.Batch")
+		} else if location.Slice[location.Index] != info {
+			tb.Error("location info is wrong")
+		}
+		if info.Path == "" {
+			tb.Error("path is empty!")
+		}
+		if info.Err != nil {
+			// tb.Log(info.Err)
+			return ActionContinue
+		}
+		if info.Info == nil {
+			tb.Error("No error but info is nil!")
+			return ActionContinue
+		}
+		if info.Info.Name() == "src" && info.Info.IsDir() && depth == 1 {
+			// tb.Log("Skip", info.Path)
+			return ActionSkipDir
+		}
+		if info.Info.Name() == "helloworld.go" {
+			isFound = true
+			// tb.Log("Found \"helloworld.go\". Size:", info.Info.Size(), "bytes. Path:", info.Path)
+			return ActionExit
+		}
+		return ActionContinue
+	}
+}
+
 func testFindFileMakeWalkFn(tb testing.TB, root string, counter *uint64) filepath.WalkFunc {
 	isFound := false
 	return func(path string, info os.FileInfo, err error) error {
@@ -303,4 +391,11 @@ func testFindFileMakeWalkFn(tb testing.TB, root string, counter *uint64) filepat
 		}
 		return nil
 	}
+}
+
+func fileInfoSliceHeaderEqual(s1, s2 []FileInfo) bool {
+	h1 := (*reflect.SliceHeader)(unsafe.Pointer(&s1))
+	h2 := (*reflect.SliceHeader)(unsafe.Pointer(&s2))
+	// fmt.Printf("%+v\t%+v\n", *h1, *h2)
+	return h1.Data == h2.Data && h1.Len == h2.Len && h1.Cap == h2.Cap
 }
