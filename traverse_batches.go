@@ -36,7 +36,7 @@ func makeTraverseBatchesHandler(batchHandler BatchHandler) taskHandler {
 				info, err = os.Lstat(path)
 			}
 			if err == nil && info != nil && info.IsDir() &&
-				(info.Mode()&os.ModeSymlink) == 0 {
+				info.Mode()&os.ModeSymlink == 0 {
 				// Get the name of files under this directory.
 				dirNames, err = readDirNames(path)
 			}
@@ -55,7 +55,7 @@ func makeTraverseBatchesHandler(batchHandler BatchHandler) taskHandler {
 				}
 				if err != nil || info == nil {
 					batch.Errs = append(batch.Errs, fInfo)
-				} else if (info.Mode() & os.ModeSymlink) != 0 {
+				} else if info.Mode()&os.ModeSymlink != 0 {
 					batch.Symlinks = append(batch.Symlinks, fInfo)
 				} else if info.IsDir() {
 					batch.Dirs = append(batch.Dirs, fInfo)
