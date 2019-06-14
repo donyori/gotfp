@@ -98,11 +98,11 @@ func makeTraverseFilesHandler(fileHandler FileHandler) taskHandler {
 				return false
 			}
 			if info1.Mode()&os.ModeSymlink != 0 {
-				return info2.Mode()&os.ModeSymlink == 0 ||
+				return info2.Mode()&os.ModeSymlink != 0 &&
 					t1.FileInfo.Path < t2.FileInfo.Path
 			}
 			if info2.Mode()&os.ModeSymlink != 0 {
-				return false
+				return true
 			}
 			return t1.FileInfo.Path < t2.FileInfo.Path
 		})
