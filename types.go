@@ -3,24 +3,25 @@ package gotfp
 import "os"
 
 type FileInfo struct {
-	Path string
-	Info os.FileInfo
-	Err  error
+	Path  string
+	Cat   FileCategory
+	Info  os.FileInfo
+	Chldn []string
+	Err   error
 }
 
 type Batch struct {
 	Parent   FileInfo
-	Dirs     []FileInfo
-	RegFiles []FileInfo
-	Symlinks []FileInfo
-	Others   []FileInfo
 	Errs     []FileInfo
+	RegFiles []FileInfo
+	Others   []FileInfo
+	Symlinks []FileInfo
+	Dirs     []FileInfo
 }
 
 type LocationBatchInfo struct {
-	Batch *Batch
-	Slice []FileInfo
-	Index int
+	Batch    *Batch
+	SliceIdx int
 }
 
 type FileHandler func(info FileInfo, depth int) Action
@@ -28,5 +29,5 @@ type FileHandler func(info FileInfo, depth int) Action
 type BatchHandler func(batch Batch, depth int) (
 	action Action, skipDirs map[string]bool)
 
-type FileWithBatchHandler func(info FileInfo, location *LocationBatchInfo,
+type FileWithBatchHandler func(info FileInfo, lctn *LocationBatchInfo,
 	depth int) Action

@@ -8,7 +8,6 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
-	"unsafe"
 
 	"github.com/donyori/goctpf"
 )
@@ -319,25 +318,37 @@ func testFindFileMakeBatchHandler(tb testing.TB, counter *uint64) BatchHandler {
 
 func testFindFileMakeFileWithBatchHandler(tb testing.TB, counter *uint64) FileWithBatchHandler {
 	isFound := false
-	return func(info FileInfo, location *LocationBatchInfo, depth int) Action {
+	return func(info FileInfo, lctn *LocationBatchInfo, depth int) Action {
 		if counter != nil {
 			atomic.AddUint64(counter, 1)
 		}
 		if isFound {
 			return ActionExit
 		}
-		if location == nil {
+		if lctn == nil {
 			tb.Error("location is nil")
-		} else if location.Batch == nil {
+		} else if lctn.Batch == nil {
 			tb.Error("location.Batch is nil")
-		} else if !fileInfoSliceHeaderEqual(location.Batch.Dirs, location.Slice) &&
-			!fileInfoSliceHeaderEqual(location.Batch.RegFiles, location.Slice) &&
-			!fileInfoSliceHeaderEqual(location.Batch.Symlinks, location.Slice) &&
-			!fileInfoSliceHeaderEqual(location.Batch.Others, location.Slice) &&
-			!fileInfoSliceHeaderEqual(location.Batch.Errs, location.Slice) {
-			tb.Error("location.Slice is NOT in location.Batch")
-		} else if location.Slice[location.Index] != info {
-			tb.Error("location info is wrong")
+		} else {
+			var slice []FileInfo
+			switch info.Cat {
+			case ErrorFile:
+				slice = lctn.Batch.Errs
+			case RegularFile:
+				slice = lctn.Batch.RegFiles
+			case OtherFile:
+				slice = lctn.Batch.Others
+			case Symlink:
+				slice = lctn.Batch.Symlinks
+			case Directory:
+				slice = lctn.Batch.Dirs
+			default:
+				tb.Error(NewUnknownFileCategoryError(info.Cat))
+			}
+			if slice != nil &&
+				!reflect.DeepEqual(slice[lctn.SliceIdx], info) {
+				tb.Error("location info is wrong")
+			}
 		}
 		if info.Path == "" {
 			tb.Error("path is empty!")
@@ -391,11 +402,4 @@ func testFindFileMakeWalkFn(tb testing.TB, root string, counter *uint64) filepat
 		}
 		return nil
 	}
-}
-
-func fileInfoSliceHeaderEqual(s1, s2 []FileInfo) bool {
-	h1 := (*reflect.SliceHeader)(unsafe.Pointer(&s1))
-	h2 := (*reflect.SliceHeader)(unsafe.Pointer(&s2))
-	// fmt.Printf("%+v\t%+v\n", *h1, *h2)
-	return h1.Data == h2.Data && h1.Len == h2.Len && h1.Cap == h2.Cap
 }

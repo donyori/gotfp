@@ -2,7 +2,6 @@ package gotfp
 
 import (
 	"errors"
-	"os"
 	"path/filepath"
 
 	"github.com/donyori/goctpf"
@@ -26,46 +25,30 @@ func TraverseBatches(handler BatchHandler,
 // Ensure batchHandler != nil.
 func makeTraverseBatchesHandler(batchHandler BatchHandler) taskHandler {
 	h := func(task *tTask, errBuf *[]error) (newTasks []*tTask, doesExit bool) {
-		var dirNames []string
 		path := task.FileInfo.Path
-		info := task.FileInfo.Info
-		err := task.FileInfo.Err
-		if err == nil {
-			if info == nil {
-				// Didn't get file stat. Get it now.
-				info, err = os.Lstat(path)
-			}
-			if err == nil && info != nil && info.IsDir() &&
-				info.Mode()&os.ModeSymlink == 0 {
-				// Get the name of files under this directory.
-				dirNames, err = readDirNames(path)
-			}
+		if task.FileInfo.Cat == 0 {
+			task.FileInfo = GetFileInfo(path)
 		}
-		task.FileInfo.Info = info
-		task.FileInfo.Err = err
+		category := task.FileInfo.Cat
+		chldn := task.FileInfo.Chldn
 		batch := Batch{Parent: task.FileInfo}
-		if len(dirNames) > 0 {
-			for _, name := range dirNames {
-				childPath := filepath.Join(path, name)
-				info, err = os.Lstat(childPath)
-				fInfo := FileInfo{
-					Path: childPath,
-					Info: info,
-					Err:  err,
-				}
-				if err != nil || info == nil {
-					batch.Errs = append(batch.Errs, fInfo)
-				} else if info.Mode()&os.ModeSymlink != 0 {
-					batch.Symlinks = append(batch.Symlinks, fInfo)
-				} else if info.IsDir() {
-					batch.Dirs = append(batch.Dirs, fInfo)
-				} else if info.Mode().IsRegular() {
-					batch.RegFiles = append(batch.RegFiles, fInfo)
-				} else {
-					batch.Others = append(batch.Others, fInfo)
-				}
+		for i := range chldn {
+			fileInfo := GetFileInfo(filepath.Join(path, chldn[i]))
+			switch fileInfo.Cat {
+			case ErrorFile:
+				batch.Errs = append(batch.Errs, fileInfo)
+			case RegularFile:
+				batch.RegFiles = append(batch.RegFiles, fileInfo)
+			case OtherFile:
+				batch.Others = append(batch.Others, fileInfo)
+			case Symlink:
+				batch.Symlinks = append(batch.Symlinks, fileInfo)
+			case Directory:
+				batch.Dirs = append(batch.Dirs, fileInfo)
+			default:
+				*errBuf = append(*errBuf,
+					NewUnknownFileCategoryError(fileInfo.Cat))
 			}
-			info = task.FileInfo.Info
 		}
 		// Copy batch.Dirs. See https://github.com/go101/go101/wiki for details.
 		dirs := append(batch.Dirs[:0:0], batch.Dirs...)
@@ -77,7 +60,7 @@ func makeTraverseBatchesHandler(batchHandler BatchHandler) taskHandler {
 		case ActionExit:
 			return nil, true
 		case ActionSkipDir:
-			if info == nil || !info.IsDir() {
+			if category != Directory {
 				*errBuf = append(*errBuf, ErrNoDirToSkip)
 				return
 			}
