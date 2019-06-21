@@ -29,7 +29,6 @@ func makeTraverseBatchesHandler(batchHandler BatchHandler) taskHandler {
 		if task.FileInfo.Cat == 0 {
 			task.FileInfo = GetFileInfo(path)
 		}
-		category := task.FileInfo.Cat
 		chldn := task.FileInfo.Chldn
 		batch := Batch{Parent: task.FileInfo}
 		for i := range chldn {
@@ -60,10 +59,6 @@ func makeTraverseBatchesHandler(batchHandler BatchHandler) taskHandler {
 		case ActionExit:
 			return nil, true
 		case ActionSkipDir:
-			if category != Directory {
-				*errBuf = append(*errBuf, ErrNoDirToSkip)
-				return
-			}
 			if len(skipDirs) == 0 {
 				// Skip all sub-directories.
 				return

@@ -30,7 +30,6 @@ func makeTraverseFilesWithBatchHandler(
 		if task.FileInfo.Cat == 0 {
 			task.FileInfo = GetFileInfo(path)
 		}
-		category := task.FileInfo.Cat
 		// Copy task.FileInfo.Chldn. See https://github.com/go101/go101/wiki for details.
 		chldn := append(task.FileInfo.Chldn[:0:0], task.FileInfo.Chldn...)
 		var lctn *LocationBatchInfo
@@ -89,9 +88,6 @@ func makeTraverseFilesWithBatchHandler(
 		case ActionExit:
 			return nil, true
 		case ActionSkipDir:
-			if category != Directory {
-				*errBuf = append(*errBuf, ErrNoDirToSkip)
-			}
 			return
 		default:
 			*errBuf = append(*errBuf, NewUnknownActionError(action))
