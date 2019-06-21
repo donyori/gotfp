@@ -267,7 +267,7 @@ func testFindFileMakeFileHandler(tb testing.TB, counter *uint64) FileHandler {
 		}
 		if info.Info.Name() == "src" && info.Info.IsDir() && depth == 1 {
 			// tb.Log("Skip", info.Path)
-			return ActionSkipDir
+			return ActionSkip
 		}
 		if info.Info.Name() == "helloworld.go" {
 			isFound = true
@@ -306,7 +306,7 @@ func testFindFileMakeBatchHandler(tb testing.TB, counter *uint64) BatchHandler {
 		if depth == 0 {
 			for i := range batch.Dirs {
 				if batch.Dirs[i].Info.Name() == "src" {
-					return ActionSkipDir, map[string]bool{
+					return ActionSkip, map[string]bool{
 						batch.Dirs[i].Path: true,
 					}
 				}
@@ -363,7 +363,7 @@ func testFindFileMakeFileWithBatchHandler(tb testing.TB, counter *uint64) FileWi
 		}
 		if info.Info.Name() == "src" && info.Info.IsDir() && depth == 1 {
 			// tb.Log("Skip", info.Path)
-			return ActionSkipDir
+			return ActionSkip
 		}
 		if info.Info.Name() == "helloworld.go" {
 			isFound = true

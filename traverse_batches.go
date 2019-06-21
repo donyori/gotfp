@@ -58,7 +58,7 @@ func makeTraverseBatchesHandler(batchHandler BatchHandler) taskHandler {
 			// skipDirs will be ignored.
 		case ActionExit:
 			return nil, true
-		case ActionSkipDir:
+		case ActionSkip:
 			if len(skipDirs) == 0 {
 				// Skip all sub-directories.
 				return

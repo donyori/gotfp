@@ -8,7 +8,7 @@ type FileCategory int8
 const (
 	ActionContinue Action = iota + 1
 	ActionExit
-	ActionSkipDir
+	ActionSkip
 )
 
 const (
@@ -23,7 +23,7 @@ var actionStrings = [...]string{
 	"Unknown",
 	"Continue",
 	"Exit",
-	"SkipDir",
+	"Skip",
 }
 
 var fileCategoryStrings = [...]string{
@@ -45,7 +45,7 @@ func ParseAction(s string) Action {
 }
 
 func (a Action) String() string {
-	if a < ActionContinue || a > ActionSkipDir {
+	if a < ActionContinue || a > ActionSkip {
 		return actionStrings[0]
 	}
 	return actionStrings[a]

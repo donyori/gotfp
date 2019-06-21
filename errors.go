@@ -19,7 +19,7 @@ func NewUnknownActionError(action interface{}) error {
 	switch action.(type) {
 	case Action:
 		a := action.(Action)
-		if a >= ActionContinue && a <= ActionSkipDir {
+		if a >= ActionContinue && a <= ActionSkip {
 			panic(fmt.Errorf("gotfp: action %q is known but mark as unknown", a))
 		}
 	case string:

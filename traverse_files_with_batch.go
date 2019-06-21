@@ -87,7 +87,7 @@ func makeTraverseFilesWithBatchHandler(
 			// Do nothing here.
 		case ActionExit:
 			return nil, true
-		case ActionSkipDir:
+		case ActionSkip:
 			return
 		default:
 			*errBuf = append(*errBuf, NewUnknownActionError(action))
